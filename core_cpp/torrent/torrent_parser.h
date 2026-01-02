@@ -9,6 +9,8 @@ public:
     explicit TorrentParser(const std::string &file_path);
     void parse();
     void print_info() const;
+    
+    const std::string& get_announce() const;
 
 private:
     std::string file_path;

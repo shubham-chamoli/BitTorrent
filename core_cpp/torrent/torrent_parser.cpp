@@ -76,3 +76,8 @@ void TorrentParser::print_info() const {
     std::cout << "Piece Length : " << piece_length << "\n";
     std::cout << "Total Size   : " << file_length << "\n";
 }
+
+const std::string& TorrentParser::get_announce() const {
+    return announce;
+}
+
