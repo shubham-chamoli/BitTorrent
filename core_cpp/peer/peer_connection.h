@@ -4,11 +4,14 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <fstream>
 
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #endif
+
+constexpr uint32_t BLOCK_SIZE = 16 * 1024; // 16 KB
 
 class PeerConnection {
 public:
@@ -32,6 +35,9 @@ private:
     uint32_t bytes_received = 0;
     std::string pieces_hashes;
     bool peer_choking = true;
+    uint32_t current_offset = 0;
+    bool peer_choked = true;
+    std::ofstream output;
 
 #ifdef _WIN32
     SOCKET sock;   
@@ -42,6 +48,10 @@ private:
     void handle_message(uint8_t id, const std::string &payload);
     void request_block(uint32_t index, uint32_t begin, uint32_t length);
     void verify_and_write_piece();
+    void request_block();
+    void handle_piece(const std::string &payload);
+    bool verify_piece();
+
 
 };
 

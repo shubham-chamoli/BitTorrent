@@ -65,6 +65,7 @@ void TorrentParser::parse() {
     } else {
         throw std::runtime_error("Invalid torrent: missing pieces hash");
     }
+    pieces_hashes = std::get<std::string>(info_dict["pieces"].value);
 
     // ---- piece length ----
     if (info_dict.count("piece length")) {
@@ -117,3 +118,4 @@ const std::string& TorrentParser::get_pieces_hashes() const {
 int64_t TorrentParser::get_piece_length() const {
     return piece_length;
 }
+
