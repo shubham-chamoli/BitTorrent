@@ -185,22 +185,46 @@ closesocket(sock);
     std::vector<PeerInfo> peers;
 
     // ---- Compact peer list ----
-    if (dict.count("peers")) {
-        std::string peer_bytes = std::get<std::string>(dict["peers"].value);
+    if (!dict.count("peers")) {
+    return peers;
+}
 
-        for (size_t i = 0; i + 6 <= peer_bytes.size(); i += 6) {
-            PeerInfo p;
-            p.ip = std::to_string((unsigned char)peer_bytes[i]) + "." +
-                   std::to_string((unsigned char)peer_bytes[i + 1]) + "." +
-                   std::to_string((unsigned char)peer_bytes[i + 2]) + "." +
-                   std::to_string((unsigned char)peer_bytes[i + 3]);
+    auto &peers_node = dict["peers"].value;
 
-            p.port = ((unsigned char)peer_bytes[i + 4] << 8) |
-                      (unsigned char)peer_bytes[i + 5];
+    // ---- Compact peers (string) ----
+    if (std::holds_alternative<std::string>(peers_node)) {
+    const std::string &peer_bytes =
+        std::get<std::string>(peers_node);
 
-            peers.push_back(p);
-        }
+    for (size_t i = 0; i + 6 <= peer_bytes.size(); i += 6) {
+        PeerInfo p;
+        p.ip = std::to_string((unsigned char)peer_bytes[i]) + "." +
+               std::to_string((unsigned char)peer_bytes[i + 1]) + "." +
+               std::to_string((unsigned char)peer_bytes[i + 2]) + "." +
+               std::to_string((unsigned char)peer_bytes[i + 3]);
+
+        p.port = ((unsigned char)peer_bytes[i + 4] << 8) |
+                  (unsigned char)peer_bytes[i + 5];
+
+        peers.push_back(p);
     }
+}
+    // ---- Non-compact peers (list) ----
+    else if (std::holds_alternative<std::vector<BencodeNode>>(peers_node)) {
+    const auto &peer_list =
+        std::get<std::vector<BencodeNode>>(peers_node);
+
+    for (const auto &n : peer_list) {
+        const auto &d =
+            std::get<std::unordered_map<std::string, BencodeNode>>(n.value);
+
+        PeerInfo p;
+        p.ip = std::get<std::string>(d.at("ip").value);
+        p.port = (uint16_t)std::get<int64_t>(d.at("port").value);
+        peers.push_back(p);
+    }
+}
+
 
     return peers;
 }

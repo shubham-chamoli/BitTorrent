@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 #include <fstream>
-
+#include<chrono>
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -20,7 +20,8 @@ public:
         uint16_t port,
         const std::string &info_hash_raw,
         const std::string &peer_id,
-        const std::string &pieces_hashes 
+        const std::string &pieces_hashes,
+        uint32_t piece_length
     );
 
     void handshake();
@@ -38,6 +39,10 @@ private:
     uint32_t current_offset = 0;
     bool peer_choked = true;
     std::ofstream output;
+    uint64_t total_downloaded = 0;
+    uint64_t total_size = 0;
+    uint32_t piece_length;
+    std::chrono::steady_clock::time_point download_start;
 
 #ifdef _WIN32
     SOCKET sock;   
@@ -51,7 +56,7 @@ private:
     void request_block();
     void handle_piece(const std::string &payload);
     bool verify_piece();
-
+    void print_progress();
 
 };
 

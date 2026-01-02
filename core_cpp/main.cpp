@@ -50,7 +50,8 @@ int main() {
                     p.port,
                     info_hash_raw,
                     peer_id,
-                    parser.get_pieces_hashes()
+                    parser.get_pieces_hashes(),
+                    parser.get_piece_length()
                 );
 
                 peer.handshake();
