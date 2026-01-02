@@ -23,6 +23,7 @@ public:
 
 private:
     std::string tracker_url;
+    bool use_tls;
 };
 
 #endif

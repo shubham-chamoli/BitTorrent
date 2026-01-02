@@ -4,6 +4,8 @@
 #include <sstream>
 #include <cstring>
 #include <unordered_map>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -12,7 +14,10 @@
 #endif
 
 TrackerClient::TrackerClient(const std::string &tracker_url)
-    : tracker_url(tracker_url) {}
+    : tracker_url(tracker_url) {
+        // Detect HTTPS tracker
+        use_tls = (tracker_url.rfind("https://", 0) == 0);
+    }
 
 static void init_winsock() {
 #ifdef _WIN32
@@ -25,24 +30,46 @@ static void init_winsock() {
 #endif
 }
 
+static void init_openssl() {
+    static bool initialized = false;
+    if (!initialized) {
+        SSL_load_error_strings();
+        OpenSSL_add_ssl_algorithms();
+        initialized = true;
+    }
+}
+
 std::vector<PeerInfo> TrackerClient::request_peers(
     const std::string &info_hash,
     const std::string &peer_id,
     int64_t left
 ) {
+    if (use_tls) {
+        std::cout << "Using HTTPS tracker\n";
+    } else {
+        std::cout << "Using HTTP tracker\n";
+    }
+
+    if (use_tls) {
+        init_openssl();
+    }
+
     init_winsock();
 
     // ---- Parse tracker URL (http://host:port/path) ----
     std::string url = tracker_url;
-    if (url.find("http://") == 0) {
+    if (url.find("https://") == 0) {
+        url = url.substr(8);
+    } else if (url.find("http://") == 0) {
         url = url.substr(7);
     }
+
 
     size_t slash = url.find('/');
     std::string host = url.substr(0, slash);
     std::string path = url.substr(slash);
 
-    std::string port = "80";
+    std::string port = use_tls ? "443" : "80";
     size_t colon = host.find(':');
     if (colon != std::string::npos) {
         port = host.substr(colon + 1);
@@ -80,20 +107,59 @@ std::vector<PeerInfo> TrackerClient::request_peers(
         throw std::runtime_error("Connection to tracker failed");
     }
 
+    SSL_CTX* ctx = nullptr;
+    SSL* ssl = nullptr;
+
+    if (use_tls) {
+        ctx = SSL_CTX_new(TLS_client_method());
+        if (!ctx) {
+            throw std::runtime_error("SSL_CTX creation failed");
+        }
+
+        // Disable cert verification for now (learning phase)
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+
+        ssl = SSL_new(ctx);
+        SSL_set_fd(ssl, sock);
+        SSL_set_tlsext_host_name(ssl, host.c_str());
+
+        if (SSL_connect(ssl) <= 0) {
+            throw std::runtime_error("TLS handshake failed");
+        }
+    }
+
     // ---- Send request ----
     std::string req = request.str();
-    send(sock, req.c_str(), (int)req.size(), 0);
+    if (use_tls) {
+        SSL_write(ssl, req.c_str(), (int)req.size());
+    } else {
+        send(sock, req.c_str(), (int)req.size(), 0);
+    }
+
 
     // ---- Receive response ----
     std::string response;
     char buffer[4096];
     int bytes;
-    while ((bytes = recv(sock, buffer, sizeof(buffer), 0)) > 0) {
+    while (true) {
+        if (use_tls) {
+            bytes = SSL_read(ssl, buffer, sizeof(buffer));
+        } else {
+            bytes = recv(sock, buffer, sizeof(buffer), 0);
+        }
+
+        if (bytes <= 0) break;
         response.append(buffer, bytes);
     }
 
+
 #ifdef _WIN32
-    closesocket(sock);
+    if (use_tls) {
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    SSL_CTX_free(ctx);
+}
+closesocket(sock);
 #endif
     freeaddrinfo(res);
 
