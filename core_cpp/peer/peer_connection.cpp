@@ -76,8 +76,66 @@ void PeerConnection::handshake() {
     std::cout << "Handshake successful!\n";
     std::cout << "Peer ID: " << peer_id_remote << "\n";
 
+    
 #ifdef _WIN32
     closesocket(sock);
     WSACleanup();
 #endif
+
+    send_interested();
+    receive_messages();
+
 }
+
+void PeerConnection::send_interested() {
+    uint32_t len = htonl(1); // length = 1 (only message ID)
+    uint8_t id = 2;          // interested
+
+    send(sock, (char*)&len, 4, 0);
+    send(sock, (char*)&id, 1, 0);
+
+    std::cout << "Sent: interested\n";
+}
+
+void PeerConnection::receive_messages() {
+    while (true) {
+        uint32_t len;
+        int r = recv(sock, (char*)&len, 4, 0);
+        if (r <= 0) break;
+
+        len = ntohl(len);
+
+        if (len == 0) {
+            std::cout << "Keep-alive received\n";
+            continue;
+        }
+
+        uint8_t id;
+        recv(sock, (char*)&id, 1, 0);
+
+        std::string payload;
+        if (len > 1) {
+            payload.resize(len - 1);
+            recv(sock, payload.data(), len - 1, 0);
+        }
+
+        handle_message(id, payload);
+    }
+}
+
+void PeerConnection::handle_message(uint8_t id, const std::string &) {
+    switch (id) {
+        case 0:
+            std::cout << "Peer choked us\n";
+            break;
+        case 1:
+            std::cout << "Peer unchoked us\n";
+            break;
+        case 5:
+            std::cout << "Received bitfield\n";
+            break;
+        default:
+            std::cout << "Received message id " << (int)id << "\n";
+    }
+}
+
