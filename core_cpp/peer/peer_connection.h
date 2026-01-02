@@ -31,8 +31,7 @@ private:
     uint32_t current_piece = 0;
     uint32_t bytes_received = 0;
     std::string pieces_hashes;
-
-
+    bool peer_choking = true;
 
 #ifdef _WIN32
     SOCKET sock;   

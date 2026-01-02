@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstring>
 #include <fstream>
+#include <chrono>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -102,28 +103,35 @@ void PeerConnection::send_interested() {
 }
 
 void PeerConnection::receive_messages() {
+    auto start = std::chrono::steady_clock::now();
+
     while (true) {
         uint32_t len;
         int r = recv(sock, (char*)&len, 4, 0);
         if (r <= 0) break;
 
         len = ntohl(len);
-
-        if (len == 0) {
-            std::cout << "Keep-alive received\n";
-            continue;
-        }
+        if (len == 0) continue;
 
         uint8_t id;
         recv(sock, (char*)&id, 1, 0);
 
-        std::string payload;
+        std::string payload(len - 1, '\0');
         if (len > 1) {
-            payload.resize(len - 1);
             recv(sock, payload.data(), len - 1, 0);
         }
 
         handle_message(id, payload);
+
+        // ---- Timeout check ----
+        if (peer_choking) {
+            auto now = std::chrono::steady_clock::now();
+            if (std::chrono::duration_cast<std::chrono::seconds>(
+                    now - start).count() > 10) {
+                std::cout << "Peer did not unchoke, giving up\n";
+                break;
+            }
+        }
     }
 }
 
@@ -134,16 +142,18 @@ void PeerConnection::handle_message(uint8_t id,
             std::cout << "Peer choked us\n";
             break;
 
-        case 1:
-            std::cout << "Peer unchoked us\n";
+        case 1:  // unchoke
+        std::cout << "Peer unchoked us\n";
+        peer_choking = false;
 
-            // Request first block of first piece (16 KB)
-            request_block(
-                0,              // piece index
-                0,              // block offset
-                16 * 1024       // block size
-            );
-            break;
+        // Request first block of first piece
+        request_block(
+            current_piece,
+            0,
+            16 * 1024
+        );
+    break;
+
 
         case 5:
             std::cout << "Received bitfield ("

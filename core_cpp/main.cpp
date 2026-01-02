@@ -25,21 +25,25 @@
             std::cout << "Peers received: " << peers.size() << "\n";
 
             if (!peers.empty()) {
-                // Take the first peer for handshake
-                const auto &p = peers[0];
-            
-                std::cout << "Attempting handshake with "
-                        << p.ip << ":" << p.port << "\n";
-            
-                PeerConnection peer(
-                    p.ip,
-                    p.port,
-                    info_hash_raw,  // RAW info_hash (NOT URL-encoded)
-                    peer_id,
-                    parser.get_pieces_hashes() 
-                );
-            
-                peer.handshake();
+                for (const auto &p : peers) {
+                try {
+                    std::cout << "Attempting handshake with "
+                              << p.ip << ":" << p.port << "\n";
+                
+                    PeerConnection peer(
+                        p.ip,
+                        p.port,
+                        info_hash_raw,
+                        peer_id,
+                        parser.get_pieces_hashes()
+                    );
+                
+                    peer.handshake();
+                    break;  // success
+                } catch (const std::exception &e) {
+                    std::cout << "Peer failed, trying next...\n";
+                }
+            }
             } else {
                 std::cout << "No peers available for handshake.\n";
             }
