@@ -85,9 +85,12 @@ std::vector<PeerInfo> TrackerClient::request_peers(
             << "&uploaded=0"
             << "&downloaded=0"
             << "&left=" << left
-            << "&compact=1 HTTP/1.1\r\n"
+            << "&compact=1"
+            << "&numwant=50"
+            << "&event=started HTTP/1.1\r\n"
             << "Host: " << host << "\r\n"
             << "Connection: close\r\n\r\n";
+
 
     // ---- DNS lookup ----
     addrinfo hints{}, *res;
