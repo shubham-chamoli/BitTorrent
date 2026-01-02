@@ -6,6 +6,7 @@
     #include "peer/peer_connection.h"
 
     int main() {
+        const int MAX_PEERS_TO_TRY = 10;
         try {
             TorrentParser parser("sample.torrent");
             parser.parse();
@@ -24,8 +25,13 @@
             
             std::cout << "Peers received: " << peers.size() << "\n";
 
-            if (!peers.empty()) {
-                for (const auto &p : peers) {
+            int attempts = 0;
+            bool connected = false;
+
+            for (const auto &p : peers) {
+                if (attempts >= MAX_PEERS_TO_TRY) break;
+                attempts++;
+            
                 try {
                     std::cout << "Attempting handshake with "
                               << p.ip << ":" << p.port << "\n";
@@ -39,16 +45,23 @@
                     );
                 
                     peer.handshake();
-                    break;  // success
+                
+                    // If handshake + messaging succeeds,
+                    // we stop trying other peers
+                    connected = true;
+                    break;
+                
                 } catch (const std::exception &e) {
-                    std::cout << "Peer failed, trying next...\n";
+                    std::cout << "Peer failed ("
+                              << p.ip << ":" << p.port
+                              << "), trying next...\n";
                 }
             }
-            } else {
-                std::cout << "No peers available for handshake.\n";
+
+            if (!connected) {
+                std::cout << "No usable peers found\n";
             }
-
-
+        
         } catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << "\n";
         }
