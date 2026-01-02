@@ -5,18 +5,22 @@
 #include <cstdint>
 
 class TorrentParser {
+
 public:
     explicit TorrentParser(const std::string &file_path);
     void parse();
     void print_info() const;
-    
+
     const std::string& get_announce() const;
+    const std::string& get_info_raw() const;
+
 
 private:
     std::string file_path;
     std::string announce;
     int64_t piece_length;
     int64_t file_length;
+    std::string info_raw;
 };
 
 #endif

@@ -37,9 +37,27 @@ void TorrentParser::parse() {
         throw std::runtime_error("Invalid torrent: missing info dictionary");
     }
 
+    
+    // ---- extract raw bencoded info dictionary ----
+    size_t info_key_pos = data.find("4:info");
+    if (info_key_pos == std::string::npos) {
+        throw std::runtime_error("Invalid torrent: info key not found");
+    }
+
+    size_t info_pos = info_key_pos + 6; // skip "4:info"
+    size_t info_start = info_pos;
+
+    // Decode info dictionary (this advances info_pos)
+    BencodeNode info_node = decode_bencode(data, info_pos);
+
+    // Save exact raw bytes (CRITICAL)
+    info_raw = data.substr(info_start, info_pos - info_start);
+
+    // Now safely decode dictionary for normal parsing
     auto info_dict = std::get<
         std::unordered_map<std::string, BencodeNode>
-    >(root_dict["info"].value);
+    >(info_node.value);
+
 
     // ---- piece length ----
     if (info_dict.count("piece length")) {
@@ -79,5 +97,9 @@ void TorrentParser::print_info() const {
 
 const std::string& TorrentParser::get_announce() const {
     return announce;
+}
+
+const std::string& TorrentParser::get_info_raw() const {
+    return info_raw;
 }
 
