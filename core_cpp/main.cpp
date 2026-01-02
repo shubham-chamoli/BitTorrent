@@ -35,7 +35,8 @@
                     p.ip,
                     p.port,
                     info_hash_raw,  // RAW info_hash (NOT URL-encoded)
-                    peer_id
+                    peer_id,
+                    parser.get_pieces_hashes() 
                 );
             
                 peer.handshake();

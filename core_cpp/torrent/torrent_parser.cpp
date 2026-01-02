@@ -58,6 +58,13 @@ void TorrentParser::parse() {
         std::unordered_map<std::string, BencodeNode>
     >(info_node.value);
 
+    // ---- pieces (SHA-1 hashes) ----
+    if (info_dict.count("pieces")) {
+        pieces_hashes =
+            std::get<std::string>(info_dict["pieces"].value);
+    } else {
+        throw std::runtime_error("Invalid torrent: missing pieces hash");
+    }
 
     // ---- piece length ----
     if (info_dict.count("piece length")) {
@@ -103,3 +110,10 @@ const std::string& TorrentParser::get_info_raw() const {
     return info_raw;
 }
 
+const std::string& TorrentParser::get_pieces_hashes() const {
+    return pieces_hashes;
+}
+
+int64_t TorrentParser::get_piece_length() const {
+    return piece_length;
+}

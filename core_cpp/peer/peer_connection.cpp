@@ -1,6 +1,8 @@
+#include "../utils/sha1.h"
 #include "peer_connection.h"
 #include <iostream>
 #include <cstring>
+#include <fstream>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -12,11 +14,13 @@ PeerConnection::PeerConnection(
     const std::string &ip,
     uint16_t port,
     const std::string &info_hash_raw,
-    const std::string &peer_id
+    const std::string &peer_id,
+    const std::string &pieces_hashes
 )
     : ip(ip), port(port),
       info_hash_raw(info_hash_raw),
-      peer_id(peer_id) {}
+      peer_id(peer_id),
+      pieces_hashes(pieces_hashes) {}
 
 void PeerConnection::handshake() {
 #ifdef _WIN32
@@ -148,25 +152,34 @@ void PeerConnection::handle_message(uint8_t id,
             break;
 
         case 7: {
-            if (payload.size() < 8) {
-                std::cout << "Invalid piece message\n";
-                break;
-            }
-
             uint32_t index =
                 ntohl(*(uint32_t*)&payload[0]);
             uint32_t begin =
                 ntohl(*(uint32_t*)&payload[4]);
+                
+            const char* data = payload.data() + 8;
+            uint32_t data_len = payload.size() - 8;
+                
+            if (index != current_piece) break;
+                
+            if (piece_buffer.empty()) {
+                piece_buffer.resize(data_len);
+            }
+        
+            memcpy(piece_buffer.data() + begin, data, data_len);
+            bytes_received += data_len;
+        
+            std::cout << "Received block "
+                      << begin << " (" << data_len << " bytes)\n";
+        
+            // Piece complete
+            if (bytes_received >= piece_buffer.size()) {
+                verify_and_write_piece();
+            }
 
-            std::cout << "Received piece "
-                      << index
-                      << " offset "
-                      << begin
-                      << " size "
-                      << payload.size() - 8
-                      << "\n";
-            break;
-        }
+    break;
+}
+
 
         default:
             std::cout << "Received message id "
@@ -194,4 +207,37 @@ void PeerConnection::request_block(uint32_t index,
 
     std::cout << "Requested block: piece "
               << index << " offset " << begin << "\n";
+}
+
+void PeerConnection::verify_and_write_piece() {
+    std::string piece_data(
+        piece_buffer.begin(),
+        piece_buffer.end()
+    );
+
+    std::string hash = sha1_raw(piece_data);
+
+    const std::string& all_hashes = pieces_hashes;
+
+    std::string expected =
+        all_hashes.substr(current_piece * 20, 20);
+
+    if (hash == expected) {
+        std::cout << "Piece "
+                  << current_piece
+                  << " verified successfully\n";
+
+        std::ofstream out("output.data",
+                          std::ios::binary | std::ios::app);
+        out.write(piece_buffer.data(),
+                  piece_buffer.size());
+    } else {
+        std::cout << "Piece "
+                  << current_piece
+                  << " hash mismatch\n";
+    }
+
+    piece_buffer.clear();
+    bytes_received = 0;
+    current_piece++;
 }

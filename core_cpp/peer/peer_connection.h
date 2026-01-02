@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -15,7 +16,8 @@ public:
         const std::string &ip,
         uint16_t port,
         const std::string &info_hash_raw,
-        const std::string &peer_id
+        const std::string &peer_id,
+        const std::string &pieces_hashes 
     );
 
     void handshake();
@@ -25,6 +27,12 @@ private:
     uint16_t port;
     std::string info_hash_raw;
     std::string peer_id;
+    std::vector<char> piece_buffer;
+    uint32_t current_piece = 0;
+    uint32_t bytes_received = 0;
+    std::string pieces_hashes;
+
+
 
 #ifdef _WIN32
     SOCKET sock;   
@@ -34,6 +42,7 @@ private:
     void receive_messages();
     void handle_message(uint8_t id, const std::string &payload);
     void request_block(uint32_t index, uint32_t begin, uint32_t length);
+    void verify_and_write_piece();
 
 };
 
