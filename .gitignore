@@ -1,0 +1,16 @@
+# Build files
+*.exe
+*.o
+*.obj
+build/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Qt generated files
+*.pro.user
+
+# OS files
+.DS_Store
+Thumbs.db
