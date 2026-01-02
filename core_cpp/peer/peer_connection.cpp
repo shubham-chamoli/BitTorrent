@@ -123,19 +123,75 @@ void PeerConnection::receive_messages() {
     }
 }
 
-void PeerConnection::handle_message(uint8_t id, const std::string &) {
+void PeerConnection::handle_message(uint8_t id,
+                                    const std::string &payload) {
     switch (id) {
         case 0:
             std::cout << "Peer choked us\n";
             break;
+
         case 1:
             std::cout << "Peer unchoked us\n";
+
+            // Request first block of first piece (16 KB)
+            request_block(
+                0,              // piece index
+                0,              // block offset
+                16 * 1024       // block size
+            );
             break;
+
         case 5:
-            std::cout << "Received bitfield\n";
+            std::cout << "Received bitfield ("
+                      << payload.size()
+                      << " bytes)\n";
             break;
+
+        case 7: {
+            if (payload.size() < 8) {
+                std::cout << "Invalid piece message\n";
+                break;
+            }
+
+            uint32_t index =
+                ntohl(*(uint32_t*)&payload[0]);
+            uint32_t begin =
+                ntohl(*(uint32_t*)&payload[4]);
+
+            std::cout << "Received piece "
+                      << index
+                      << " offset "
+                      << begin
+                      << " size "
+                      << payload.size() - 8
+                      << "\n";
+            break;
+        }
+
         default:
-            std::cout << "Received message id " << (int)id << "\n";
+            std::cout << "Received message id "
+                      << (int)id
+                      << "\n";
     }
 }
 
+
+void PeerConnection::request_block(uint32_t index,
+                                   uint32_t begin,
+                                   uint32_t length) {
+    uint32_t msg_len = htonl(13);
+    uint8_t id = 6;
+
+    uint32_t i = htonl(index);
+    uint32_t b = htonl(begin);
+    uint32_t l = htonl(length);
+
+    send(sock, (char*)&msg_len, 4, 0);
+    send(sock, (char*)&id, 1, 0);
+    send(sock, (char*)&i, 4, 0);
+    send(sock, (char*)&b, 4, 0);
+    send(sock, (char*)&l, 4, 0);
+
+    std::cout << "Requested block: piece "
+              << index << " offset " << begin << "\n";
+}

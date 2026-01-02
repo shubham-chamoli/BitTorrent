@@ -33,6 +33,8 @@ private:
     void send_interested();
     void receive_messages();
     void handle_message(uint8_t id, const std::string &payload);
+    void request_block(uint32_t index, uint32_t begin, uint32_t length);
+
 };
 
 #endif
