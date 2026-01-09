@@ -6,7 +6,7 @@ A hybrid BitTorrent client built using:
 - pybind11 for bindings
 
 ## Project Structure
-- core_cpp/    : BitTorrent core logic
+- core_cpp/   : BitTorrent core logic
 - gui_python/ : GUI interface
 - bindings/   : C++ ↔ Python bridge
 
