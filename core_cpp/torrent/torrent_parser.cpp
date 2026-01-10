@@ -32,6 +32,25 @@ void TorrentParser::parse() {
         announce = "N/A";
     }
 
+    // ---- announce-list ----
+    if (root_dict.count("announce-list")) {
+    const auto& tiers =
+        std::get<std::vector<BencodeNode>>(root_dict["announce-list"].value);
+
+    for (const auto& tier : tiers) {
+        const auto& urls =
+            std::get<std::vector<BencodeNode>>(tier.value);
+
+        for (const auto& u : urls) {
+            trackers.push_back(
+                std::get<std::string>(u.value)
+            );
+        }
+    }
+    } else {
+        trackers.push_back(announce);
+    }
+
     // ---- info ----
     if (!root_dict.count("info")) {
         throw std::runtime_error("Invalid torrent: missing info dictionary");
@@ -119,3 +138,6 @@ int64_t TorrentParser::get_piece_length() const {
     return piece_length;
 }
 
+const std::vector<std::string>& TorrentParser::get_trackers() const {
+    return trackers;
+}

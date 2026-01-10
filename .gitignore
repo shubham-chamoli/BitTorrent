@@ -1,20 +1,16 @@
-# Build files
+# Ignore build output
 *.exe
 *.o
 *.obj
-build/
 
-# Python cache
-__pycache__/
-*.pyc
-
-# Qt generated files
-*.pro.user
-
-# OS files
-.DS_Store
-Thumbs.db
-
-.vscode/
+# Ignore download data
+*.data
+*.iso
 *.torrent
 
+# Ignore VS Code settings
+.vscode/
+
+# Ignore Python cache
+__pycache__/
+*.pyd
