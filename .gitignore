@@ -1,16 +1,23 @@
-# Ignore build output
+# --- C++ Build Artifacts ---
 *.exe
 *.o
 *.obj
 
-# Ignore download data
-*.data
-*.iso
-*.torrent
-
-# Ignore VS Code settings
-.vscode/
-
-# Ignore Python cache
-__pycache__/
+# --- Python Bindings & Cache ---
 *.pyd
+__pycache__/
+
+# --- Windows Dependencies (DLLs) ---
+# We do not want to commit these to GitHub
+*.dll
+
+# --- Data & Output Files ---
+*.iso
+*.data
+*.torrent
+output_file
+downloaded.data
+
+# --- Environment & IDE ---
+venv/
+.vscode/

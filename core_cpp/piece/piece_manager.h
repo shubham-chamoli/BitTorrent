@@ -62,6 +62,13 @@ public:
         return std::all_of(bitfield.begin(), bitfield.end(), [](bool b){ return b; });
     }
 
+    float get_progress_ratio() {
+        std::lock_guard<std::mutex> lock(mtx);
+        int count = std::count(bitfield.begin(), bitfield.end(), true);
+        if (total_pieces == 0) return 0.0f;
+        return (float)count / total_pieces;
+    }
+
 private:
     std::string pieces_hashes;
     uint32_t piece_length;
