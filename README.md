@@ -11,4 +11,4 @@ A hybrid BitTorrent client built using:
 - bindings/   : C++ ↔ Python bridge
 
 ## Status
-🚧 Under development
+Under development
